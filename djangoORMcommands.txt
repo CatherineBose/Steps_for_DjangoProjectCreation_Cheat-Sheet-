@@ -33,6 +33,12 @@ Updating the record - once you obtain an object that has the record you want to 
 b = Blog.objects.first() # gets the first record in the blogs table
 b.name = "CodingDojo Blog"  # set name to be "CodingDojo Blog"
 b.save() # updates the blog record
+Remove method to remove many to many relationship like in books many to many res with authors
+For the 3rd book, remove the first author
+book3 = Book.objects.get(id=3)
+authorforbook3 = book3.authors.first()
+book3.authors.remove(author1ForBook3)
+
 Deleting the record - use delete().  For example
 b = Blog.objects.get(id=1)
 b.delete() # deletes that particular record
