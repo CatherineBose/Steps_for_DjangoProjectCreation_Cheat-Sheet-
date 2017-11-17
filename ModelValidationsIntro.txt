@@ -1,0 +1,76 @@
+Model Validations Intro
+Now that we can insert data, it's time to validate the user's input before inserting those values into the database. The code we're going to use for validating data will look familiar, just like we did in Flask. However, we're going to set up our code to be a part of our models, since models should be doing everything database-related.
+
+Consider the following Blog model and how we could add validation:
+
+# Inside your app's models.py file
+from __future__ import unicode_literals
+from django.db import models
+# Create your models here.
+class Blog(models.Model):
+    name = models.CharField(max_length=255)
+    desc = models.TextField()
+    created_at = models.DateTimeField(auto_now_add = True)
+    updated_at = models.DateTimeField(auto_now = True)
+"""
+models come with a hidden key:
+      objects = models.Manager()
+we are going to overwrite this!
+"""
+Models inheriting from the model class include a property, objects, something we've touched on already and you've used when running query methods. This objects includes all those ORM query methods that are so convenient, like .all(), .get(), etc. We can extend this functionality using the Manager class. Let's look at how to do so.
+
+To do this, we are going to make a new property for our Blog class and have that property be a reference to our manager. This Manager class is another built-in Django class used to extend our models' functionality.
+
+Let's create a new class BlogManager and add it to our previous code.
+
+Important: Notice that our Blog and BlogManager classes are inheriting from entirely different models.
+By inheriting from models.Model, Blog is made into a database table. models.Manager, however, means our BlogManager will inherit from the ORM-building class.
+# Inside your app's models.py file
+from __future__ import unicode_literals
+from django.db import models
+#Our new manager!
+#No methods in our new manager should ever catch the whole request object with a parameter!!! (just parts, like request.POST)
+class BlogManager(models.Manager):
+    def basic_validator(self, postData):
+        errors = {}
+        if len(postData['name']) < 5:
+            errors["name"] = "Blog name should be more than 5 characters"
+        if len(postData['desc']) < 10:
+            errors["desc"] = "Blog desc should be more than 10 characters"
+        return errors
+class Blog(models.Model):
+    name = models.CharField(max_length=255)
+    desc = models.TextField()
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    # *************************
+    # Connect an instance of BlogManager to our Blog model overwriting
+    # the old hidden objects key with a new one with extra properties!!!
+    objects = BlogManager()
+    # *************************
+Now in our views.py file, we can use Blog.objects.basic_validator(postData):
+
+# Inside your app's views.py file
+from django.shortcuts import render, HttpResponse, redirect
+from .models import Blog
+def update(request):
+    errors = Blog.objects.basic_validator(request.POST)
+        if len(errors):
+            for tag, error in errors.iteritems():
+                messages.error(request, error, extra_tags=tag)
+            return redirect('/blog/edit/'+id)
+        else:
+            blog = Blog.objects.get(id = id)
+            blog.name = request.POST['name']
+            blog.desc = request.POST['desc']
+            blog.save()
+            return redirect('/blogs')
+Feel free to experiment with the BlogManager methods – any change you make to that class does not need to be migrated since it's not a database table. 
+
+Documentation Note:
+Want to learn more? 
+
+https://docs.djangoproject.com/en/1.11/topics/db/managers/
+For flash messages, see https://docs.djangoproject.com/en/1.11/ref/contrib/messages/
+Alternative way of doing some form validations - https://docs.djangoproject.com/en/1.11/topics/forms/
+You may have noticed that we're sending you to the primary literature a bit more frequently in this chapter. This is intentional and important: an essential skill to hone is the ability to parse official documentation. If you're having trouble understanding the documentation, get help. Learning to read the docs isn't always as easy as it might seem.

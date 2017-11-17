@@ -1,0 +1,75 @@
+Named routes make referencing your Django app’s routes pretty easy. All we need to do is pass a keyword variable (name) to the url method we use inside our app’s urls.py file. For example:
+
+# Inside your app's urls.py file
+from django.conf.urls import url
+from . import views
+urlpatterns = [
+    url(r'^$', views.toindex, name='my_index'),
+    url(r'^this_app/new$', views.new, name='my_new'),
+    url(r'^this_app/(?P<id>\d+)/edit$', views.edit, name='my_edit'),
+    url(r'^this_app/(?P<id>\d+)/delete$', views.delete, name='my_delete'),
+    url(r'^this_app/(?P<id>\d+)$', views.show, name='my_show'),
+]
+Now we can more easily reference those routes from inside our app’s templates:
+
+NOTE: target/ in the examples below is what gets caught by our main project’s urls.py
+
+<!-- Inside your app's index.html file -->
+<a href="/target/this_app/new"></a>
+<!-- is the equivalent of:  -->
+<a href="{% url 'my_new' %}"></a>
+<!-- This form's action attribute -->
+<form class="" action="/target/this_app/5/delete" method="post">
+  <input type="submit" value="Submit">
+</form>
+<!-- is the equivalent of: -->
+<form class="" action="{%url 'my_delete' id=5 %}" method="post">
+  <input type="submit" value="Submit">
+</form>
+Notice that in our form, the argument being passed will replace the named variable in the URL – pretty nifty. Thanks Django!
+
+This is going to allow us to properly route things… but what about redirects from our views.py file? For that we need to pull in some added Django capability:
+
+# Inside your app's views.py file
+from django.core.urlresolvers import reverse
+That gives us access to the reverse method, which we can use like so:
+
+# Still inside your app's views.py file
+from django.shortcuts import render, HttpResponse, redirect
+from django.core.urlresolvers import reverse
+# Create your views here.
+# Example of an old index method:
+def index(request):
+    print("hello, I am your first request")
+    return redirect('/target/this_app/new')
+# Can be transformed to the following:
+def index(request):
+   print("hello, I am your first request")
+   return redirect(reverse('my_new'))
+Now, one of the coolest things about Django is how we can mix, match and reuse all the different apps we (and others) create. (You'll be asked to do this shortly!) But what if we're using routes with the same names in different apps? How can our project tell the difference? The answer is to add a namespace (documentation here) argument to the routes you include in your project's urls.py file. For example:
+
+#Inside your main urls.py file
+urlpatterns = [
+    url(r'^accounts/', include('apps.login_reg_app.urls', namespace='users')),
+    url(r'^courses/', include('apps.courses_app.urls', namespace='courses')),
+]
+Now it doesn't matter if the hypothetical  login_reg_app and courses_app each have named routes such as index, create, and show. You can reference each one in any template like so:
+
+<!-- Inside a Django template (.html) -->
+<a href="{% url 'courses:index' %}">This link will hit the index route in your courses_app</a>
+<a href="{% url 'users:index' %}">And this link will hit the index route in your login_reg_app</a>
+You can use the named routes of any app in a  views.py file adopting giving the same colon-separated string to your reverse method, which figures out the actual route based on the name:
+
+#In a views.py method
+return redirect(reverse('users:new'))
+What about filling in route parameters like id for routes that need them (such as show?). In your template, it's the same as before. In a views.py file, you'll need to pass in the correct keyword argument (kwarg) to your reverse function. 
+
+#In a views.py method
+return redirect(reverse('users:show', kwargs={'id': your_id_variable }))
+
+By this point, you’ve already completed a few Django assignments. Go back and refactor your code to take advantage of named routes.
+
+Forms
+There are other ways you could validate the form.  We won't spend too much time on this but you could read about it here:
+
+https://docs.djangoproject.com/en/1.11/topics/forms/
